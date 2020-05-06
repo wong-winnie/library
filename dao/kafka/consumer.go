@@ -5,20 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Shopify/sarama"
-	"library/dao/config"
+	"github.com/wong-winnie/library/dao/config"
 	"log"
 )
 
 type KafkaConsumer struct {
-	consumerConn sarama.ConsumerGroup
-	isClose      bool
+	ConsumerConn    sarama.ConsumerGroup
+	ConsumerHandler MainHandler
 }
 
 func InitConsumer(cfg *config.KafkaCfg) *KafkaConsumer {
 	consumerCfg := sarama.NewConfig()
 	consumerCfg.Version = sarama.V2_2_0_0
 	consumerCfg.Producer.Return.Errors = true
-	consumerCfg.Net.SASL.Enable = false
 	consumerCfg.Producer.Return.Successes = true
 	consumerCfg.Producer.RequiredAcks = sarama.WaitForAll
 	consumerCfg.Producer.Partitioner = sarama.NewManualPartitioner
@@ -38,35 +37,23 @@ func InitConsumer(cfg *config.KafkaCfg) *KafkaConsumer {
 		return &KafkaConsumer{}
 	} else {
 		return &KafkaConsumer{
-			consumerConn: gConn,
-			isClose:      false,
+			ConsumerConn: gConn,
 		}
 	}
 }
 
-func (consumer KafkaConsumer) topicConsumer(topic string, hand sarama.ConsumerGroupHandler) {
-	go func() {
-		for err := range consumer.consumerConn.Errors() {
-			fmt.Println(err)
-		}
-	}()
-
+func (consumer KafkaConsumer) TopicConsumer(topic string, hand sarama.ConsumerGroupHandler) error {
 	ctx, _ := context.WithCancel(context.Background())
 
 	for {
-		err := consumer.consumerConn.Consume(ctx, []string{topic}, hand)
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-		if ctx.Err() != nil {
-			break
+		if err := consumer.ConsumerConn.Consume(ctx, []string{topic}, hand); err != nil || ctx.Err() != nil {
+			return err
 		}
 	}
 }
 
 type MainHandler struct {
-	recvFunc func(recv []byte) bool
+	RecvFunc func(recv []byte) bool
 }
 
 func (m *MainHandler) Setup(sess sarama.ConsumerGroupSession) error {
@@ -81,38 +68,18 @@ func (m *MainHandler) Cleanup(sess sarama.ConsumerGroupSession) error {
 
 //此方法会自动控制偏移值，当分组里的主题消息被接收到时，则偏移值会进行加1 他是跟着主题走的
 func (m *MainHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-
-	mo := make(map[int32]int64, 0)
+	offsetList := make(map[int32]int64, 0)
 
 	for message := range claim.Messages() {
-
-		if claim.InitialOffset()+int64(mo[message.Partition]) != message.Offset && claim.InitialOffset()+int64(mo[message.Partition]) >= 0 {
-			fmt.Println("-----", claim.InitialOffset()+mo[message.Partition], message.Partition)
+		//claim.InitialOffset() 初始偏移量是从-2开始
+		if claim.InitialOffset()+int64(offsetList[message.Partition]) != message.Offset && claim.InitialOffset()+int64(offsetList[message.Partition]) >= 0 {
 			return errors.New(fmt.Sprintf("Topic:%v, Partition:%v, Offset:%v,  Value:%v", message.Topic, message.Partition, message.Offset, message.Value))
 		} else {
-			if ok := m.recvFunc(message.Value); ok {
+			if ok := m.RecvFunc(message.Value); ok {
 				sess.MarkMessage(message, "") //确认消费， 偏移量+1
 			}
 		}
-		mo[message.Partition]++
+		offsetList[message.Partition]++
 	}
 	return nil
-}
-
-func TestConsumer() {
-
-	//var (
-	//	Topic      = "demo_service998"
-	//	GroupName  = "chat_Group_LLH91"
-	//	ClientName = "client3"
-	//)
-	//
-	//consumer, err := InitConsumer([]string{"192.168.28.25:9092", "192.168.28.26:9092", "192.168.28.27:9092"}, GroupName, ClientName)
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
-	//
-	//hand := &MainHandler{}
-	//consumer.topicConsumer(Topic, hand)
 }

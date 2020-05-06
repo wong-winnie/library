@@ -1,10 +1,10 @@
 package gorm
 
 import (
-	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
-	"library/dao/common"
-	"library/dao/config"
+	"github.com/wong-winnie/library/dao/common"
+	"github.com/wong-winnie/library/dao/config"
 	"time"
 )
 
@@ -13,30 +13,14 @@ type GormMgr struct {
 }
 
 func InitGorm(cfg *config.MysqlCfg) *GormMgr {
-	conn, err := gorm.Open("mysql", fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", cfg.User, cfg.Password, cfg.Address, cfg.DBName))
+	conn, err := gorm.Open("mysql", cfg.ConnStr)
 	if err != nil {
 		common.SimplePanic("InitGorm失败", err.Error())
 	} else {
 		conn.DB().SetMaxIdleConns(1024)
 		conn.DB().SetMaxOpenConns(1024)
 		conn.DB().SetConnMaxLifetime(9 * time.Second)
-
 		conn.LogMode(true) //打印SQL
-	}
-
-	return &GormMgr{Conn: conn}
-}
-
-func InitGorm2(cfg *config.MysqlCfg) *GormMgr {
-	conn, err := gorm.Open("mysql", cfg.DSN)
-	if err != nil {
-		common.SimplePanic("InitGorm失败", err.Error())
-	} else {
-		conn.DB().SetMaxIdleConns(1024)
-		conn.DB().SetMaxOpenConns(1024)
-		conn.DB().SetConnMaxLifetime(9 * time.Second)
-
-		//conn.LogMode(true)  //打印SQL
 	}
 
 	return &GormMgr{Conn: conn}

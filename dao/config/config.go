@@ -42,5 +42,5 @@ type MysqlCfg struct {
 	User     string
 	Password string
 	DBName   string
-	DSN      string
+	ConnStr  string
 }

@@ -2,11 +2,11 @@ package log
 
 import (
 	"fmt"
+	"github.com/wong-winnie/library/dao/common"
+	"github.com/wong-winnie/library/dao/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"library/dao/common"
-	"library/dao/config"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,11 +18,11 @@ type LogMgr struct {
 	debug       bool
 }
 
-//TODO : 主进程不要太快结束, 不然看不到日志
 func InitLog(cfg *config.LogCfg) *LogMgr {
 	if cfg.ProgramName == "" {
 		common.SimplePanic("ProgramName Is Empty")
 	}
+
 	SetLogger(cfg.ProgramName+"Info", NewLogger(cfg.ProgramName+"_info.log", cfg.Debug))
 	SetLogger(cfg.ProgramName+"Error", NewLogger(cfg.ProgramName+"_err.log", cfg.Debug))
 	SetLogger(cfg.ProgramName+"Panic", NewLogger(cfg.ProgramName+"_panic.log", cfg.Debug))
@@ -70,6 +70,7 @@ var maploggers map[string]*zap.SugaredLogger
 
 func init() {
 	maploggers = make(map[string]*zap.SugaredLogger)
+	os.OpenFile(GetWorkDir()+"/logs/log.log", os.O_CREATE, 0755)
 }
 
 func GetWorkDir() string {
@@ -105,17 +106,6 @@ func NewLogger(fileName string, debug bool) *zap.SugaredLogger {
 		return tmp
 	}
 
-	//highPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-	//	return lvl >= zapcore.ErrorLevel
-	//})
-	//lowPriority := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-	//	return lvl < zapcore.ErrorLevel
-	//})
-
-	//consoleDebugging := zapcore.Lock(os.Stdout)
-
-	//consoleErrors := zapcore.Lock(os.Stderr)
-
 	w := zapcore.AddSync(&lumberjack.Logger{
 		Filename:   fileName,
 		MaxSize:    20,   // megabytes
@@ -129,27 +119,9 @@ func NewLogger(fileName string, debug bool) *zap.SugaredLogger {
 	newDevelopmentEncoderConfig.CallerKey = "T"
 	newDevelopmentEncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	if debug {
-		core := zapcore.NewTee(
-			//zapcore.NewCore(zapcore.NewConsoleEncoder(newDevelopmentEncoderConfig), consoleErrors, highPriority),
-			//zapcore.NewCore(zapcore.NewConsoleEncoder(newDevelopmentEncoderConfig), consoleDebugging, highPriority),
-
-			//zapcore.NewCore(zapcore.NewConsoleEncoder(newDevelopmentEncoderConfig), consoleDebugging, zapcore.InfoLevel),
-			zapcore.NewCore(zapcore.NewJSONEncoder(newDevelopmentEncoderConfig), w, zapcore.InfoLevel),
-		)
-		logger := zap.New(core)
-		return logger.Sugar()
-	}
-
-	newProductionEncoderConfig := zap.NewProductionEncoderConfig()
-	newProductionEncoderConfig.TimeKey = "T"
-	newProductionEncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	newProductionEncoderConfig.CallerKey = "F"
-
 	core := zapcore.NewTee(
-		//zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), w, highPriority),
-		zapcore.NewCore(zapcore.NewJSONEncoder(newProductionEncoderConfig), w, zapcore.ErrorLevel),
+		zapcore.NewCore(zapcore.NewJSONEncoder(newDevelopmentEncoderConfig), w, zapcore.InfoLevel),
 	)
-	logger := zap.New(core, zap.AddCaller())
+	logger := zap.New(core)
 	return logger.Sugar()
 }
