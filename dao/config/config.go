@@ -1,11 +1,12 @@
 package config
 
 type Config struct {
-	RedisCfg *RedisCfg
-	ZkCfg    *ZkCfg
-	LogCfg   *LogCfg
-	KafkaCfg *KafkaCfg
-	MysqlCfg *MysqlCfg
+	RedisCfg   *RedisCfg
+	ZkCfg      *ZkCfg
+	LogCfg     *LogCfg
+	KafkaCfg   *KafkaCfg
+	MysqlCfg   *MysqlCfg
+	ElasticCfg *ElasticCfg
 }
 
 type RedisCfg struct {
@@ -43,4 +44,8 @@ type MysqlCfg struct {
 	Password string
 	DBName   string
 	ConnStr  string
+}
+
+type ElasticCfg struct {
+	Url string
 }

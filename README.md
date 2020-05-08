@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"github.com/wong-winnie/library/dao/config"
+	"github.com/wong-winnie/library/dao/elastice"
 	"github.com/wong-winnie/library/dao/gorm"
 	"github.com/wong-winnie/library/dao/kafka"
 	"github.com/wong-winnie/library/dao/log"
@@ -23,6 +24,7 @@ type ServiceBlock struct {
 	logConn       *log.LogMgr
 	mysqlConn     *gorm.GormMgr
 	redisConn     *redis.RedisSingleMgr
+	elasticConn   *elastice.ElasticMgr
 }
 
 func InitServiceBlock(cfg *config.Config) *ServiceBlock {
@@ -32,6 +34,7 @@ func InitServiceBlock(cfg *config.Config) *ServiceBlock {
 		logConn:       log.InitLog(cfg.LogCfg),
 		mysqlConn:     gorm.InitGorm(cfg.MysqlCfg),
 		redisConn:     redis.InitRedisSingle(cfg.RedisCfg),
+        elasticConn:   elastice.InitElastic(cfg.ElasticCfg),
 	}
 }
 
@@ -41,6 +44,7 @@ func main() {
 		LogCfg:   &config.LogCfg{ProgramName: "Test1"},
 		MysqlCfg: &config.MysqlCfg{ConnStr: fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", "root", "winnie123321", "123.207.79.96:3306", "testDb")},
 		RedisCfg: &config.RedisCfg{Addr: "192.168.28.25:6379"},
+	    ElasticCfg: &config.ElasticCfg{Url: "http://192.168.28.126:9200"},
 	}
 
 	blockService = InitServiceBlock(blockCfg)
@@ -55,6 +59,8 @@ func main() {
 	//TestKafkaConsumer()
 
 	//TestRedis()
+
+	//TestElastic()
 }
 ```
 
@@ -257,4 +263,46 @@ func TestRedis(){
 	v :=blockService.redisConn.Conn.Get("test").String()
 	fmt.Println(v)
 }
+```
+
+# ElasticSearch
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+)
+
+type Employee struct {
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Age       int      `json:"age"`
+	About     string   `json:"about"`
+	Interests []string `json:"interests"`
+}
+
+func TestElastic() {
+	e := Employee{"winnie", "wong", 18, "good good study, day day up", []string{"IT"}}
+	put, err := blockService.elasticConn.Conn.Index().
+		Index("employee_index").
+		Type("employee_type").
+		Id("2").
+		BodyJson(e).
+		Do(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(put)
+
+	result, err := blockService.elasticConn.Conn.Search().Index("employee_index").Type("employee_type").Do(context.Background())
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	for k, v := range result.Hits.Hits {
+		fmt.Println(k, string(v.Source))
+	}
+}
+
 ```
