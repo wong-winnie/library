@@ -16,16 +16,12 @@ func InitProducer(cfg *config.KafkaCfg) *KafkaProducer {
 	producerCfg.Producer.Partitioner = sarama.NewRandomPartitioner
 	producerCfg.Producer.Return.Successes = true
 
-	if conn, err := sarama.NewSyncProducer(cfg.Address, producerCfg); err != nil {
-		log.Fatal(err.Error())
-		return &KafkaProducer{}
-	} else {
-		pd := &KafkaProducer{
-			ProductConn: conn,
-		}
-
-		return pd
+	conn, err := sarama.NewSyncProducer(cfg.Address, producerCfg)
+	if err != nil {
+		log.Fatal("InitProducer Failed", err.Error())
 	}
+
+	return &KafkaProducer{ProductConn: conn}
 }
 
 func (product *KafkaProducer) SendMessage(topic string, data []byte) (partition int32, offset int64, err error) {

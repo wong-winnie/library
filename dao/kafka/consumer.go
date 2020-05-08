@@ -27,19 +27,15 @@ func InitConsumer(cfg *config.KafkaCfg) *KafkaConsumer {
 
 	conn, err := sarama.NewClient(cfg.Address, consumerCfg)
 	if err != nil {
-		log.Fatal(err.Error())
-		return &KafkaConsumer{}
+		log.Fatal("InitConsumer Failed", err.Error())
 	}
 
 	gConn, err := sarama.NewConsumerGroupFromClient(cfg.GroupName, conn)
 	if err != nil {
-		log.Fatal(err.Error())
-		return &KafkaConsumer{}
-	} else {
-		return &KafkaConsumer{
-			ConsumerConn: gConn,
-		}
+		log.Fatal("InitConsumer Failed", err.Error())
 	}
+
+	return &KafkaConsumer{ConsumerConn: gConn}
 }
 
 func (consumer KafkaConsumer) TopicConsumer(topic string, hand sarama.ConsumerGroupHandler) error {

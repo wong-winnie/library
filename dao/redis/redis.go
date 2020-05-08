@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/wong-winnie/library/dao/config"
 )
@@ -20,7 +19,6 @@ type RedisSingleMgr struct {
 }
 
 func InitRedisSingle(cfg *config.RedisCfg) *RedisSingleMgr {
-	fmt.Println(cfg)
 	return &RedisSingleMgr{
 		Conn: redis.NewClient(&redis.Options{
 			Addr:     cfg.Addr,

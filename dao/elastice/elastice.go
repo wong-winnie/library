@@ -13,7 +13,7 @@ type ElasticMgr struct {
 func InitElastic(cfg *config.ElasticCfg) *ElasticMgr {
 	client, err := elastic.NewClient(elastic.SetURL(cfg.Url))
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal("InitElastic Failed", err.Error())
 	}
 	return &ElasticMgr{Conn: client}
 }
