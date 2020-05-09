@@ -44,6 +44,7 @@ type MysqlCfg struct {
 	Password string
 	DBName   string
 	ConnStr  string
+	Debug    bool
 }
 
 type ElasticCfg struct {

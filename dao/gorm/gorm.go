@@ -20,6 +20,6 @@ func InitGorm(cfg *config.MysqlCfg) *GormMgr {
 	conn.DB().SetMaxIdleConns(1024)
 	conn.DB().SetMaxOpenConns(1024)
 	conn.DB().SetConnMaxLifetime(9 * time.Second)
-	conn.LogMode(true) //打印SQL
+	conn.LogMode(cfg.Debug) //打印SQL
 	return &GormMgr{Conn: conn}
 }
