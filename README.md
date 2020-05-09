@@ -40,11 +40,11 @@ func InitServiceBlock(cfg *config.Config) *ServiceBlock {
 
 func main() {
 	blockCfg = &config.Config{
-		KafkaCfg: &config.KafkaCfg{Address: []string{"192.168.28.25:9092", "192.168.28.26:9092", "192.168.28.27:9092"}, GroupName: "testKafka6", ClientName: "testKafka-1"},
-		LogCfg:   &config.LogCfg{ProgramName: "Test1"},
-		MysqlCfg: &config.MysqlCfg{ConnStr: fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", "root", "winnie123321", "123.207.79.96:3306", "testDb")},
-		RedisCfg: &config.RedisCfg{Addr: "192.168.28.25:6379"},
-	    ElasticCfg: &config.ElasticCfg{Url: "http://192.168.28.126:9200"},
+		KafkaCfg:   &config.KafkaCfg{Address: []string{"192.168.28.25:9092", "192.168.28.26:9092", "192.168.28.27:9092"}, GroupName: "testKafka6", ClientName: "testKafka-1"},
+		LogCfg:     &config.LogCfg{ProgramName: "Test1"},
+		MysqlCfg:   &config.MysqlCfg{ConnStr: fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", "root", "winnie123321", "123.207.79.96:3306", "testDb"), Debug:true},
+		RedisCfg:   &config.RedisCfg{Addr: "192.168.28.25:6379"},
+		ElasticCfg: &config.ElasticCfg{Url: "http://192.168.28.126:9200"},
 	}
 
 	blockService = InitServiceBlock(blockCfg)
@@ -124,74 +124,6 @@ package main
 
 import "fmt"
 
-//TODO : StartMySql
-func TestMysql() {
-	blockService.mysqlConn.Conn.AutoMigrate(TestProgram{})
-
-	data := TestProgram{}
-	if ok, err := getOneTestProgram(&data, "id=2"); err != nil && !ok {
-		blockService.logConn.ZapErrorLog("getOneTestProgram", "Error", err)
-		return
-	} else {
-		fmt.Println(data)
-	}
-
-	data2 := []TestProgram{}
-	if ok, err := getAllTestProgram(&data2, "1=1"); err != nil && !ok {
-		blockService.logConn.ZapErrorLog("getAllTestProgram", "Error", err)
-		return
-	} else {
-		fmt.Println(data2)
-	}
-
-	data3 := []TestProgram{}
-	if ok, err := getAllOfPageTestProgram(&data3, "id desc", "1=1", 2, 3); err != nil && !ok {
-		blockService.logConn.ZapErrorLog("getAllOfPageTestProgram", "Error", err)
-		return
-	} else {
-		fmt.Println(data3)
-	}
-
-	data4 := TestProgram{
-		Id:        22,
-		Name:      "22",
-		Type:      22,
-		StartTime: "22",
-		AppId:     "22",
-		Secret:    "22",
-	}
-
-	if row, err := insertTestProgram(&data4); err != nil || row == 0 {
-		blockService.logConn.ZapErrorLog("insertTestProgram", "Error", err, "Row", row)
-		return
-	} else {
-		fmt.Println(row)
-	}
-
-	data5 := TestProgram{
-		Name: "33",
-		Type: 0,
-	}
-	fmt.Println(data5)
-	if row, err := updateTestProgram(&data5, "id=22"); err != nil || row == 0 {
-		blockService.logConn.ZapErrorLog("updateTestProgram", "Error", err, "Row", row)
-		return
-	} else {
-		fmt.Println(row)
-	}
-
-	data6 := make(map[string]interface{})
-	data6["StartTime"] = "44"
-	data6["AppId"] = "55"
-	data6["Secret"] = "0"
-	if row, err := updateOfZeroTestProgram(data6, "id=22"); err != nil || row == 0 {
-		blockService.logConn.ZapErrorLog("updateOfZeroTestProgram", "Error", err, "Row", row)
-		return
-	} else {
-		fmt.Println(row)
-	}
-}
-
 /*
 	primary_key 主键
 	auto_increment 自增
@@ -210,38 +142,116 @@ type TestProgram struct {
 	Secret    string `gorm:"not null"`
 }
 
-//TODO : StartMySql - 查询单条数据
+func TestMysql() {
+	//数据库表不存在则创建, 添加缺少的字段，不删除/更改当前数据
+	blockService.mysqlConn.Conn.AutoMigrate(TestProgram{})
+
+	//TODO : 查询单条数据
+	data := TestProgram{}
+	if ok, err := getOneTestProgram(&data, "id=2"); err != nil && !ok {
+		blockService.logConn.ZapErrorLog("getOneTestProgram", "Error", err)
+		return
+	} else {
+		fmt.Println(data)
+	}
+
+	//TODO : 查询所有数据
+	data2 := []TestProgram{}
+	if ok, err := getAllTestProgram(&data2, "1=1"); err != nil && !ok {
+		blockService.logConn.ZapErrorLog("getAllTestProgram", "Error", err)
+		return
+	} else {
+		fmt.Println(data2)
+	}
+
+	//TODO : 查询所有数据分页
+	data3 := []TestProgram{}
+	if ok, err := getAllOfPageTestProgram(&data3, "id desc", "1=1", 2, 3); err != nil && !ok {
+		blockService.logConn.ZapErrorLog("getAllOfPageTestProgram", "Error", err)
+		return
+	} else {
+		fmt.Println(data3)
+	}
+
+	//TODO : 插入一条或多条数据
+	//目前 gorm 并不支持批量插入这一功能，但已经被列入 v2.0 的计划里面
+	data4 := TestProgram{
+		Id:        22,
+		Name:      "22",
+		Type:      22,
+		StartTime: "22",
+		AppId:     "22",
+		Secret:    "22",
+	}
+
+	if row, err := insertTestProgram(&data4); err != nil || row == 0 {
+		blockService.logConn.ZapErrorLog("insertTestProgram", "Error", err, "Row", row)
+		return
+	} else {
+		fmt.Println(row)
+	}
+
+	//TODO : 更新一条或多条数据
+	data5 := TestProgram{
+		Name: "33",
+		Type: 0,
+	}
+	fmt.Println(data5)
+	if row, err := updateTestProgram(&data5, "id=22"); err != nil || row == 0 {
+		blockService.logConn.ZapErrorLog("updateTestProgram", "Error", err, "Row", row)
+		return
+	} else {
+		fmt.Println(row)
+	}
+
+	//TODO : 更新一条或多条数据（有零值）
+	data6 := make(map[string]interface{})
+	data6["StartTime"] = "44"
+	data6["AppId"] = "55"
+	data6["Secret"] = "0"
+	if row, err := updateOfZeroTestProgram(data6, "id=22"); err != nil || row == 0 {
+		blockService.logConn.ZapErrorLog("updateOfZeroTestProgram", "Error", err, "Row", row)
+		return
+	} else {
+		fmt.Println(row)
+	}
+
+	//TODO : 原生sql语句
+	data7 := []TestProgram{}
+	if err := blockService.mysqlConn.Conn.Raw("select * from test_programs").Scan(&data7).Error; err != nil {
+		blockService.logConn.ZapErrorLog("Raw", "Error", err)
+		return
+	} else {
+		fmt.Println(data7)
+	}
+
+}
+
 func getOneTestProgram(data *TestProgram, whereSql string) (bool, error) {
 	db := blockService.mysqlConn.Conn.Model(data).First(data, whereSql)
 	return db.RecordNotFound(), db.Error
 }
 
-//TODO : StartMySql - 查询所有数据
 func getAllTestProgram(data *[]TestProgram, whereSql string) (bool, error) {
 	db := blockService.mysqlConn.Conn.Model(data).Find(data, whereSql)
 	return db.RecordNotFound(), db.Error
 }
 
-//TODO : StartMySql - 查询所有数据分页
 func getAllOfPageTestProgram(data *[]TestProgram, orderSql, whereSql string, page, count int) (bool, error) {
 	db := blockService.mysqlConn.Conn.Model(data).Order(orderSql).Offset((page-1)*count).Limit(count).Find(data, whereSql)
 	return db.RecordNotFound(), db.Error
 }
 
-//TODO : StartMySql - 插入一条或多条数据
-//目前 gorm 并不支持批量插入这一功能，但已经被列入 v2.0 的计划里面
 func insertTestProgram(data *TestProgram) (int64, error) {
 	db := blockService.mysqlConn.Conn.Create(data)
 	return db.RowsAffected, db.Error
 }
 
-//TODO : StartMySql - 更新一条或多条数据
 func updateTestProgram(data *TestProgram, whereSql string) (int64, error) {
 	db := blockService.mysqlConn.Conn.Model(data).Where(whereSql).Update(data)
 	return db.RowsAffected, db.Error
 }
 
-//TODO : StartMySql - 更新一条或多条数据（有零值）
 func updateOfZeroTestProgram(data map[string]interface{}, whereSql string) (int64, error) {
 	db := blockService.mysqlConn.Conn.Model(TestProgram{}).Where(whereSql).Update(data)
 	return db.RowsAffected, db.Error
