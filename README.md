@@ -34,7 +34,7 @@ func InitServiceBlock(cfg *config.Config) *ServiceBlock {
 		logConn:       log.InitLog(cfg.LogCfg),
 		mysqlConn:     gorm.InitGorm(cfg.MysqlCfg),
 		redisConn:     redis.InitRedisSingle(cfg.RedisCfg),
-        elasticConn:   elastice.InitElastic(cfg.ElasticCfg),
+		elasticConn:   elastice.InitElastic(cfg.ElasticCfg),
 	}
 }
 
@@ -42,7 +42,7 @@ func main() {
 	blockCfg = &config.Config{
 		KafkaCfg:   &config.KafkaCfg{Address: []string{"192.168.28.25:9092", "192.168.28.26:9092", "192.168.28.27:9092"}, GroupName: "testKafka6", ClientName: "testKafka-1"},
 		LogCfg:     &config.LogCfg{ProgramName: "Test1"},
-		MysqlCfg:   &config.MysqlCfg{ConnStr: fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", "root", "winnie123321", "123.207.79.96:3306", "testDb"), Debug:true},
+		MysqlCfg:   &config.MysqlCfg{ConnStr: fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", "winnie", "winnie", "123.207.79.96:3306", "testDb"), Debug:true},
 		RedisCfg:   &config.RedisCfg{Addr: "192.168.28.25:6379"},
 		ElasticCfg: &config.ElasticCfg{Url: "http://192.168.28.126:9200"},
 	}
