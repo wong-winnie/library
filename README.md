@@ -65,6 +65,8 @@ func main() {
 ```
 
 # Log
+//服务运行过程中用vim修改日志数据会导致后续日志无法记录
+//vim修改时会创建一个临时文件, 修改完再替换, 原inode被占用, vim用新的inode,替换完变成新的inode
 ```go
 package main
 
