@@ -1,7 +1,7 @@
 package elastice
 
 import (
-	"github.com/olivere/elastic"
+	"github.com/olivere/elastic/v7"
 	"github.com/wong-winnie/library/dao/config"
 	"log"
 )
