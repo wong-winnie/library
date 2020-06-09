@@ -1,4 +1,4 @@
-package timehelp
+package helptime
 
 import "time"
 
