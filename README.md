@@ -69,6 +69,62 @@ func main() {
 }
 ```
 
+# patch
+```go
+package patch
+
+import (
+	"fmt"
+	"github.com/wong-winnie/library/dao/config"
+	"github.com/wong-winnie/library/dao/gorm"
+	"github.com/wong-winnie/library/dao/kafka"
+	"github.com/wong-winnie/library/dao/log"
+	"github.com/wong-winnie/library/dao/redis"
+	"sync"
+)
+
+var (
+	blockCfg     = &config.Config{}
+	BlockService = &ServiceBlock{}
+)
+
+type ServiceBlock struct {
+	KafkaProducer     *kafka.KafkaProducer
+	KafkaConsumer     *kafka.KafkaConsumer
+	LogConn           *log.LogMgr
+	MysqlConn         *gorm.GormMgr
+	RedisConn         *redis.RedisSingleMgr
+	PoolReqActiveList sync.Pool
+	PoolResActiveList sync.Pool
+}
+
+func InitServiceBlock(cfg *config.Config) *ServiceBlock {
+	return &ServiceBlock{
+		KafkaProducer: kafka.InitProducer(cfg.KafkaCfg),
+		KafkaConsumer: kafka.InitConsumer(cfg.KafkaCfg),
+		LogConn:       log.InitLog(cfg.LogCfg),
+		MysqlConn:     gorm.InitGorm(cfg.MysqlCfg),
+		RedisConn:     redis.InitRedisSingle(cfg.RedisCfg),
+	}
+}
+
+func InitPatch() {
+	blockCfg = &config.Config{
+		KafkaCfg:   &config.KafkaCfg{Address: []string{"192.168.28.25:9092", "192.168.28.26:9092", "192.168.28.27:9092"}, GroupName: "testKafka6", ClientName: "testKafka-1"},
+		LogCfg:     &config.LogCfg{ProgramName: "Test1"},
+		MysqlCfg:   &config.MysqlCfg{ConnStr: fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", "winnie", "winnie", "123.207.79.96:3306", "testDb"), Debug: true},
+		RedisCfg:   &config.RedisCfg{Addr: "192.168.28.25:6379"},
+		ElasticCfg: &config.ElasticCfg{Url: "http://192.168.28.126:9200"},
+	}
+
+	BlockService = InitServiceBlock(blockCfg)
+	BlockService.LogConn.ZapCustom("LogActiveList")
+
+	fmt.Println("-------InitServiceSuccess-------")
+}
+
+```
+
 # Log
 //服务运行过程中用vim修改日志数据会导致后续日志无法记录
 //vim修改时会创建一个临时文件, 修改完再替换, 原inode被占用, vim用新的inode,替换完变成新的inode
@@ -87,7 +143,7 @@ func TestLog() {
 }
 ```
 
-# Kafka
+# Kafka - [相关文档](https://mp.weixin.qq.com/s?__biz=MzI0OTMzMDgwMg==&mid=2247484202&idx=1&sn=6c3eb1d23f0b8cb7ba2bcfc401ecd6ba)
 ```go
 package main
 
@@ -263,6 +319,226 @@ func updateOfZeroTestProgram(data map[string]interface{}, whereSql string) (int6
 	db := blockService.mysqlConn.Conn.Model(TestProgram{}).Where(whereSql).Update(data)
 	return db.RowsAffected, db.Error
 }
+```
+
+# MySQL(v2)
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+	"patch"
+)
+
+/*
+	primary_key 主键
+	auto_increment 自增
+	not null 非空
+	index:索引名 普通索引, 索引名相同->组合索引
+	unique_index 唯一索引
+	type:text, varchar(255) 数据类型
+	default:数值  默认值
+*/
+type TestProgram struct {
+	Id        int    `gorm:"primary_key;auto_increment;not null"`
+	Name      string `gorm:"not null;index:sa"`
+	Type      int    `gorm:"not null;index:sa"`
+	StartTime string `gorm:"not null"`
+	AppId     string `gorm:"not null"`
+	Secret    string `gorm:"not null"`
+}
+
+type ReqTestProgram1 struct {
+	Id int64
+}
+
+type ResTestProgram1 struct {
+	Items TestProgram
+}
+
+type ReqTestProgram2 struct {
+	pageSize  int
+	pageCount int
+}
+
+type ResTestProgram2 struct {
+	totalCount int64
+	Items      []TestProgram
+}
+
+type ReqTestProgram3 struct {
+	Name      string
+	Type      int
+	StartTime string
+	AppId     string
+	Secret    string
+}
+
+type ReqTestProgram4 struct {
+	Id        int64
+	Name      string
+	Type      int
+	StartTime string
+	AppId     string
+	Secret    string
+}
+
+func main() {
+	patch.InitPatch()
+
+	//查询单条数据
+	//GetOneData()
+
+	//查询所有数据并分页
+	//GetAllData()
+
+	//插入一条或多条数据
+	//InsertData()
+
+	//更新一条或多条数据
+	//UpdateData()
+}
+
+func GetOneData() {
+	var (
+		req ReqTestProgram1
+		res ResTestProgram1
+	)
+
+	req = ReqTestProgram1{Id: 3}
+
+	defer func() {
+		patch.BlockService.LogConn.ZapErrorLog("GetOneData", "req", req)
+		patch.BlockService.LogConn.ZapErrorLog("GetOneData", "res", res)
+	}()
+
+	if err := getOneTestProgram(&res.Items, fmt.Sprintf("id=%d", req.Id)); err != nil {
+		patch.BlockService.LogConn.ZapErrorLog("GetOneData", "Error", err, "Id", req.Id)
+		return
+	} else {
+		fmt.Println(res)
+	}
+}
+
+func GetAllData() {
+	var (
+		req ReqTestProgram2
+		res ResTestProgram2
+	)
+
+	req = ReqTestProgram2{
+		pageSize:  1,
+		pageCount: 10,
+	}
+
+	defer func() {
+		patch.BlockService.LogConn.ZapErrorLog("GetAllData", "req", req)
+		patch.BlockService.LogConn.ZapErrorLog("GetAllData", "res", res)
+	}()
+
+	if err := GetAllTestProgram(&res.Items, "id desc", "1=1", req.pageSize, req.pageCount, &res.totalCount); err != nil {
+		patch.BlockService.LogConn.ZapErrorLog("GetAllData", "Error", err)
+		return
+	} else {
+		fmt.Println(res)
+	}
+}
+
+func InsertData() {
+	var (
+		req  ReqTestProgram3
+		data TestProgram
+	)
+
+	req = ReqTestProgram3{
+		Name:      "333",
+		Type:      333,
+		StartTime: "333",
+		AppId:     "333",
+		Secret:    "333",
+	}
+
+	defer func() {
+		patch.BlockService.LogConn.ZapErrorLog("InsertData", "req", req)
+	}()
+
+	data = TestProgram{
+		Name:      req.Name,
+		Type:      req.Type,
+		StartTime: req.StartTime,
+		AppId:     req.AppId,
+		Secret:    req.Secret,
+	}
+
+	if err := InsertTestProgram(&data); err != nil {
+		patch.BlockService.LogConn.ZapErrorLog("insertTestProgram", "Error", err)
+		return
+	} else {
+		fmt.Println(err)
+	}
+}
+
+func UpdateData() {
+	var (
+		req ReqTestProgram4
+	)
+
+	req = ReqTestProgram4{
+		Id:        333,
+		Name:      "",
+		Type:      444,
+		StartTime: "334443",
+		AppId:     "333",
+		Secret:    "333",
+	}
+
+	defer func() {
+		patch.BlockService.LogConn.ZapErrorLog("InsertData", "req", req)
+	}()
+
+	data := make(map[string]interface{})
+	data["Name"] = req.Name
+	data["Type"] = req.Type
+	data["AppId"] = req.AppId
+	data["Secret"] = req.Secret
+
+	//通过结构体变量更新字段值, gorm库会忽略零值字段。就是字段值等于0, nil, "", false这些值会被忽略掉，不会更新。如果想更新零值，可以使用map类型替代结构体
+	if err := UpdateTestProgram(data, fmt.Sprintf("id=%d", req.Id)); err != nil {
+		patch.BlockService.LogConn.ZapErrorLog("insertTestProgram", "Error", err)
+		return
+	} else {
+		fmt.Println(err)
+	}
+}
+
+func getOneTestProgram(data *TestProgram, whereSql string) error {
+	//查不到数据时会报错 RecordNotFound
+	db := patch.BlockService.MysqlConn.Conn.Model(data).First(data, whereSql)
+	return db.Error
+}
+
+func GetAllTestProgram(data *[]TestProgram, orderSql, whereSql string, pageSize, pageCount int, totalCount *int64) error {
+	db := patch.BlockService.MysqlConn.Conn.Model(data).Where(whereSql).Count(totalCount).Order(orderSql).Offset((pageSize - 1) * pageCount).Limit(pageCount).Find(data)
+	return db.Error
+}
+
+func InsertTestProgram(data *TestProgram) error {
+	db := patch.BlockService.MysqlConn.Conn.Create(data)
+	if db.RowsAffected == 0 {
+		return errors.New("RowsAffected Is Zero")
+	}
+	return db.Error
+}
+
+func UpdateTestProgram(data map[string]interface{}, whereSql string) error {
+	db := patch.BlockService.MysqlConn.Conn.Model(TestProgram{}).Where(whereSql).Update(data)
+	if db.RowsAffected == 0 {
+		return errors.New("RowsAffected Is Zero")
+	}
+	return db.Error
+}
+
 ```
 
 # Redis
