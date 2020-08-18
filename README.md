@@ -47,6 +47,7 @@ func main() {
 	blockCfg = &config.Config{
 		KafkaCfg:   &config.KafkaCfg{Address: []string{"192.168.28.25:9092", "192.168.28.26:9092", "192.168.28.27:9092"}, GroupName: "testKafka6", ClientName: "testKafka-1"},
 		LogCfg:     &config.LogCfg{ProgramName: "Test1"},
+        //charset=utf8mb4  (utf8不是真正的UTF8,只能包含三个字节的unicode, 4个字节就会报错。改为utf8mb4,就可存入Emoji字符)
 		MysqlCfg:   &config.MysqlCfg{ConnStr: fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", "winnie", "winnie", "123.207.79.96:3306", "testDb"), Debug:true},
 		RedisCfg:   &config.RedisCfg{Addr: "192.168.28.25:6379"},
 		ElasticCfg: &config.ElasticCfg{Url: "http://192.168.28.126:9200"},
