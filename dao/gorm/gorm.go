@@ -13,7 +13,11 @@ type GormMgr struct {
 }
 
 func InitGorm(cfg *config.MysqlCfg) *GormMgr {
-	conn, err := gorm.Open("mysql", cfg.ConnStr)
+	//用户名或密码有特殊字符（例如@、#）时就会报错，解决方法就是将特殊字符进行转义，方法如下：
+	//user := url.QueryEscape(user)
+	//password := url.QueryEscape(password)
+
+	conn, err := gorm.Open(cfg.DriveType, cfg.ConnStr)
 	if err != nil {
 		log.Fatal("InitGorm Failed", err.Error())
 	}

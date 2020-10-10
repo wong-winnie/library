@@ -37,14 +37,15 @@ type KafkaCfg struct {
 }
 
 type MysqlCfg struct {
-	Address  string
-	IP       string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	ConnStr  string
-	Debug    bool
+	Address   string
+	IP        string
+	Port      int
+	User      string
+	Password  string
+	DBName    string
+	ConnStr   string
+	Debug     bool
+	DriveType string //mysql, mssql, postgres ...
 }
 
 type ElasticCfg struct {
